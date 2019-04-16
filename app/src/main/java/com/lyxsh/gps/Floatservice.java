@@ -80,7 +80,7 @@ public class Floatservice extends Service {
             public void direction(RockerView.Direction direction) {
                 switch (direction) {
                     case DIRECTION_UP:
-                        vertical = -G;
+                        vertical = G;
                         horizontal = 0;
                         break;
                     case DIRECTION_LEFT:
@@ -92,23 +92,23 @@ public class Floatservice extends Service {
                         horizontal = G;
                         break;
                     case DIRECTION_DOWN:
-                        vertical = G;
+                        vertical = -G;
                         horizontal = 0;
                         break;
                     case DIRECTION_UP_RIGHT:
-                        vertical = -G;
+                        vertical = G;
                         horizontal = G;
                         break;
                     case DIRECTION_UP_LEFT:
-                        vertical = -G;
+                        vertical = G;
                         horizontal = -G;
                         break;
                     case DIRECTION_DOWN_RIGHT:
-                        vertical = G;
+                        vertical = -G;
                         horizontal = G;
                         break;
                     case DIRECTION_DOWN_LEFT:
-                        vertical = G;
+                        vertical = -G;
                         horizontal = -G;
                         break;
                     case DIRECTION_CENTER:
