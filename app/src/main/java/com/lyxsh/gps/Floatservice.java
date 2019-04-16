@@ -148,8 +148,8 @@ public class Floatservice extends Service {
         @Override
         public void run() {
             if (flag) {
-                latitude += horizontal;
-                longitude += vertical;
+                latitude += vertical;
+                longitude += horizontal;
             }
         }
     };
