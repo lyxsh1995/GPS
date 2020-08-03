@@ -9,10 +9,10 @@
     <com.kongqw.rockerlibrary.view.RockerView
         android:id="@+id/rockerView"
         android:layout_margin="10dp"
-        android:layout_width="80dp"
-        android:layout_height="80dp"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
         android:background="#00000000"
         app:areaBackground="#66ff0000"
-        app:rockerBackground="#F9CC00"
-        app:rockerRadius="15dp" />
+        app:rockerBackground="#ccF9CC00"
+        app:rockerRadius="55dp" />
 </FrameLayout>

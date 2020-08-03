@@ -35,7 +35,7 @@ public class Floatservice extends Service {
     private LocationManager locationManager;
     private double latitude, longitude;
     private double horizontal, vertical;
-    private double G = 0.0001;
+    private double G = 0.0005;
 
     @Nullable
     @Override
@@ -52,7 +52,7 @@ public class Floatservice extends Service {
         initfloat();
         initview();
         start();
-        timer.schedule(timerTask, 0, 200);
+//        timer.schedule(timerTask, 0, 200);
     }
 
     private void initfloat() {
@@ -69,7 +69,7 @@ public class Floatservice extends Service {
 
     private void initview() {
         RockerView rockerView = floatView.findViewById(R.id.rockerView);
-        rockerView.setCallBackMode(RockerView.CallBackMode.CALL_BACK_MODE_MOVE);
+        rockerView.setCallBackMode(RockerView.CallBackMode.CALL_BACK_MODE_STATE_CHANGE);
         rockerView.setOnShakeListener(RockerView.DirectionMode.DIRECTION_8, new RockerView.OnShakeListener() {
             @Override
             public void onStart() {
@@ -116,11 +116,15 @@ public class Floatservice extends Service {
                         horizontal = 0;
                         break;
                 }
+                latitude += vertical;
+                longitude += horizontal;
             }
 
             @Override
             public void onFinish() {
                 flag = false;
+                vertical = 0;
+                horizontal = 0;
             }
         });
     }
