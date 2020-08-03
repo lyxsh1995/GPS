@@ -1,5 +1,6 @@
 package com.lyxsh.gps;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -8,12 +9,19 @@ import android.graphics.Bitmap;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.net.Uri;
+import android.os.Build;
+import android.provider.Settings;
+import android.support.annotation.RequiresApi;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.InputType;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.LinearLayout;
 
 import com.baidu.location.BDAbstractLocationListener;
 import com.baidu.location.BDLocation;
@@ -24,6 +32,8 @@ import com.baidu.mapapi.SDKInitializer;
 import com.baidu.mapapi.map.BaiduMap;
 import com.baidu.mapapi.map.BitmapDescriptor;
 import com.baidu.mapapi.map.BitmapDescriptorFactory;
+import com.baidu.mapapi.map.Circle;
+import com.baidu.mapapi.map.CircleOptions;
 import com.baidu.mapapi.map.MapPoi;
 import com.baidu.mapapi.map.MapStatus;
 import com.baidu.mapapi.map.MapStatusUpdate;
@@ -33,13 +43,15 @@ import com.baidu.mapapi.map.Marker;
 import com.baidu.mapapi.map.MarkerOptions;
 import com.baidu.mapapi.map.MyLocationConfiguration;
 import com.baidu.mapapi.map.OverlayOptions;
+import com.baidu.mapapi.map.Stroke;
 import com.baidu.mapapi.model.LatLng;
 
 public class MainActivity extends AppCompatActivity
-        implements BaiduMap.OnMapClickListener {
+        implements BaiduMap.OnMapClickListener,BaiduMap.OnMapLongClickListener{
     private String mMockProviderName = LocationManager.GPS_PROVIDER;
     private Button bt_Ok;
     public static LocationManager locationManager;
+    public static LocationListener locationListener;
     public static double latitude = 30.823271, longitude = 120.875627;
     private LocationClient mLocClient;
     private MyLocationConfiguration.LocationMode mCurrentMode;// 定位模式
@@ -51,13 +63,15 @@ public class MainActivity extends AppCompatActivity
 
     private BitmapDescriptor bd;
     private Marker mMarker;
-    private LatLng curLatlng;
+    private LatLng curLatlng;//当前中心位置
 
     private Boolean isFrist = true;
+    private Intent serverIntent;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        requestPermission();
         SDKInitializer.initialize(getApplication());
         SDKInitializer.setCoordType(CoordType.GCJ02);
         setContentView(R.layout.activity_main);
@@ -65,6 +79,17 @@ public class MainActivity extends AppCompatActivity
         iniListner();
         inilocation();
         iniMap();
+    }
+
+    private void requestPermission() {
+        final int PERMISSION_REQUEST_COARSE_LOCATION = 1;
+        final int REQUEST_STORAGE_PERMISSION = 2;
+
+        requestPermissions(new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION,
+                android.Manifest.permission.ACCESS_COARSE_LOCATION}, PERMISSION_REQUEST_COARSE_LOCATION);
+        requestPermissions(new String[]{android.Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                REQUEST_STORAGE_PERMISSION);
+
     }
 
     /**
@@ -85,17 +110,42 @@ public class MainActivity extends AppCompatActivity
      * iniListner 接口初始化
      */
     private void iniListner() {
+        serverIntent = new Intent(MainActivity.this, Floatservice.class);
         bt_Ok.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 latitude = curLatlng.latitude;
                 longitude = curLatlng.longitude;
-
-                Intent serverIntent = new Intent(MainActivity.this, Floatservice.class);
                 startService(serverIntent);
+                showSpaceDialog();
             }
         });
         mBaiduMap.setOnMapClickListener(this);
+        mBaiduMap.setOnMapLongClickListener(this);
+    }
+
+    private void showSpaceDialog() {
+        final EditText editText = new EditText(MainActivity.this);
+        editText.setHint("单位:公里");
+        AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this).setView(editText);
+        dialog.setNegativeButton("取消",
+                new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                    }
+                });
+        dialog.setPositiveButton("设置",
+                new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        if (!editText.getText().toString().equals("")) {
+                            DrawRound(Double.parseDouble(editText.getText().toString()));
+                            dialog.dismiss();
+                        }
+                    }
+                });
+        dialog.show();
     }
 
     /**
@@ -145,15 +195,29 @@ public class MainActivity extends AppCompatActivity
     }
 
     /**
+     * 根据距离画圈
+     *
+     * @param v
+     */
+    private void DrawRound(double v) {
+        OverlayOptions ooCircle = new CircleOptions()
+                .fillColor(0x00000000)
+                .center(curLatlng)
+                .stroke(new Stroke(5, 0xAA01A4F1))
+                .radius((int)(v*1000));
+        mBaiduMap.addOverlay(ooCircle);
+    }
+
+
+    /**
      * inilocation 初始化 位置模拟
      */
+    @RequiresApi(api = Build.VERSION_CODES.CUPCAKE)
     @SuppressLint("MissingPermission")
     private void inilocation() {
+
         locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
-        locationManager.addTestProvider(mMockProviderName, false, true, false, false, true, true,
-                true, 0, 5);
-        locationManager.setTestProviderEnabled(mMockProviderName, true);
-        locationManager.requestLocationUpdates(mMockProviderName, 0, 0, new LocationListener() {
+        locationListener = new LocationListener() {
             @Override
             public void onLocationChanged(Location location) {
 
@@ -173,7 +237,12 @@ public class MainActivity extends AppCompatActivity
             public void onProviderDisabled(String s) {
 
             }
-        });
+        };
+        removeProvider();
+        locationManager.addTestProvider(mMockProviderName, false, true, false, false, true, true,
+                true, 0, 5);
+        locationManager.setTestProviderEnabled(mMockProviderName, true);
+        locationManager.requestLocationUpdates(mMockProviderName, 0, 0, locationListener);
     }
 
     @Override
@@ -249,6 +318,11 @@ public class MainActivity extends AppCompatActivity
         return false;
     }
 
+    @Override
+    public void onMapLongClick(LatLng latLng) {
+        startActivity(new Intent().setData(Uri.parse("baidumap://map/geocoder?location="+latLng.latitude+","+latLng.longitude+"&coord_type=gcj02&src=com.lyxsh.gps")));
+    }
+
     /**
      * setCurrentMapLatLng 设置当前坐标
      */
@@ -260,5 +334,16 @@ public class MainActivity extends AppCompatActivity
         LatLng ll = new LatLng(arg0.latitude, arg0.longitude);
         MapStatusUpdate u = MapStatusUpdateFactory.newLatLng(ll);
         mBaiduMap.animateMapStatus(u);
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.CUPCAKE)
+    private void removeProvider() {
+        locationManager.removeUpdates(locationListener);
+        try {
+            locationManager.setTestProviderEnabled(LocationManager.GPS_PROVIDER, false);
+            locationManager.removeTestProvider(LocationManager.GPS_PROVIDER);
+        } catch (IllegalArgumentException e) {
+            e.printStackTrace();
+        }
     }
 }

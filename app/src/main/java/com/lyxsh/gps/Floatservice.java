@@ -4,10 +4,13 @@ import android.app.Service;
 import android.content.Intent;
 import android.graphics.PixelFormat;
 import android.location.Location;
+import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.Build;
 import android.os.IBinder;
 import android.os.SystemClock;
 import android.support.annotation.Nullable;
+import android.support.annotation.RequiresApi;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
@@ -33,6 +36,7 @@ public class Floatservice extends Service {
     private Boolean RUN = true;
     private String mMockProviderName = LocationManager.GPS_PROVIDER;
     private LocationManager locationManager;
+    private LocationListener locationListener;
     private double latitude, longitude;
     private double horizontal, vertical;
     private double G = 0.0005;
@@ -47,10 +51,11 @@ public class Floatservice extends Service {
     public void onCreate() {
         floatservicethis = this;
         locationManager = MainActivity.locationManager;
+        locationListener = MainActivity.locationListener;
         latitude = GPSUtil.gcj02_To_Gps84(MainActivity.latitude, MainActivity.longitude)[0];
         longitude = GPSUtil.gcj02_To_Gps84(MainActivity.latitude, MainActivity.longitude)[1];
-        initfloat();
-        initview();
+//        initfloat();
+//        initview();
         start();
 //        timer.schedule(timerTask, 0, 200);
     }
@@ -130,6 +135,11 @@ public class Floatservice extends Service {
     }
 
     private void start() {
+        if (thread != null){
+            RUN = false;
+            thread.stop();
+            RUN = true;
+        }
         thread = new Thread(new Runnable() {
             @Override
             public void run() {
@@ -161,6 +171,7 @@ public class Floatservice extends Service {
     /**
      * setLocation 设置GPS的位置
      */
+    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR1)
     private void setLocation(double longitude, double latitude) {
         Location location = new Location(mMockProviderName);
         location.setTime(System.currentTimeMillis());
@@ -172,12 +183,27 @@ public class Floatservice extends Service {
         locationManager.setTestProviderLocation(mMockProviderName, location);
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.CUPCAKE)
+    private void removeProvider() {
+        locationManager.removeUpdates(locationListener);
+        try {
+            locationManager.setTestProviderEnabled(LocationManager.GPS_PROVIDER, false);
+            locationManager.removeTestProvider(LocationManager.GPS_PROVIDER);
+        } catch (IllegalArgumentException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.CUPCAKE)
     @Override
     public void onDestroy() {
         RUN = false;
         thread = null;
         flag = false;
+        removeProvider();
         timer.cancel();
         windowManager.removeView(floatView);
     }
+
+
 }
