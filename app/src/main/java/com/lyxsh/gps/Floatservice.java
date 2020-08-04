@@ -32,14 +32,13 @@ public class Floatservice extends Service {
     public WindowManager windowManager;
     public WindowManager.LayoutParams params = new WindowManager.LayoutParams();
     FloatView floatView;
-    private Thread thread;// 需要一个线程一直刷新
-    private Boolean RUN = true;
     private String mMockProviderName = LocationManager.GPS_PROVIDER;
     private LocationManager locationManager;
     private LocationListener locationListener;
     private double latitude, longitude;
     private double horizontal, vertical;
     private double G = 0.0005;
+    private Timer setLocationTimer;
 
     @Nullable
     @Override
@@ -54,10 +53,17 @@ public class Floatservice extends Service {
         locationListener = MainActivity.locationListener;
         latitude = GPSUtil.gcj02_To_Gps84(MainActivity.latitude, MainActivity.longitude)[0];
         longitude = GPSUtil.gcj02_To_Gps84(MainActivity.latitude, MainActivity.longitude)[1];
+        start();
 //        initfloat();
 //        initview();
-        start();
 //        timer.schedule(timerTask, 0, 200);
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        latitude = GPSUtil.gcj02_To_Gps84(MainActivity.latitude, MainActivity.longitude)[0];
+        longitude = GPSUtil.gcj02_To_Gps84(MainActivity.latitude, MainActivity.longitude)[1];
+        return super.onStartCommand(intent, flags, startId);
     }
 
     private void initfloat() {
@@ -135,25 +141,14 @@ public class Floatservice extends Service {
     }
 
     private void start() {
-        if (thread != null){
-            RUN = false;
-            thread.stop();
-            RUN = true;
-        }
-        thread = new Thread(new Runnable() {
+        setLocationTimer = new Timer();
+        TimerTask timerTask = new TimerTask() {
             @Override
             public void run() {
-                while (RUN) {
-                    try {
-                        Thread.sleep(100);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    setLocation(longitude, latitude);
-                }
+                setLocation(longitude, latitude);
             }
-        });
-        thread.start();
+        };
+        timer.schedule(timerTask,0,100);
     }
 
     Boolean flag = false;
@@ -197,12 +192,11 @@ public class Floatservice extends Service {
     @RequiresApi(api = Build.VERSION_CODES.CUPCAKE)
     @Override
     public void onDestroy() {
-        RUN = false;
-        thread = null;
+        setLocationTimer.cancel();
         flag = false;
         removeProvider();
         timer.cancel();
-        windowManager.removeView(floatView);
+//        windowManager.removeView(floatView);
     }
 
 

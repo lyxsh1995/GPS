@@ -83,12 +83,12 @@ public class MainActivity extends AppCompatActivity
 
     private void requestPermission() {
         final int PERMISSION_REQUEST_COARSE_LOCATION = 1;
-        final int REQUEST_STORAGE_PERMISSION = 2;
 
-        requestPermissions(new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION,
-                android.Manifest.permission.ACCESS_COARSE_LOCATION}, PERMISSION_REQUEST_COARSE_LOCATION);
-        requestPermissions(new String[]{android.Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                REQUEST_STORAGE_PERMISSION);
+        requestPermissions(new String[]{
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.ACCESS_FINE_LOCATION
+        }, PERMISSION_REQUEST_COARSE_LOCATION);
 
     }
 
